@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Claude Code orchestration files (project-local, not shared)
+CLAUDE.md
+.claude/
