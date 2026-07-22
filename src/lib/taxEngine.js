@@ -27,10 +27,16 @@ export function marginalRate(taxable, brackets) {
  */
 export function computeTaxes({
   year, status, wages = 0, seGross = 0, seExpenses = 0, k401 = 0, rothIra = 0,
+  interest = 0, qualDividends = 0, ltcg = 0, stcg = 0,
 }) {
   const data = TAX_DATA[year]
   const se = Math.max(0, seGross - seExpenses)
-  const gross = wages + se
+  interest = Math.max(0, interest)
+  qualDividends = Math.max(0, qualDividends)
+  ltcg = Math.max(0, ltcg)
+  stcg = Math.max(0, stcg)
+  const investmentIncome = interest + qualDividends + ltcg + stcg
+  const gross = wages + se + investmentIncome
   // Roth IRA contributions are after-tax — they don't reduce AGI, unlike 401k.
   const preTax = k401
 
@@ -61,9 +67,31 @@ export function computeTaxes({
   const taxable = Math.max(0, taxableBeforeQbi - qbiDeduction)
   const brackets = data.brackets[status]
 
-  const federal = bracketTax(taxable, brackets)
+  // Qualified dividends and LTCG get preferential 0/15/20% rates, stacked on
+  // top of ordinary taxable income.
+  const pref = qualDividends + ltcg
+  const prefTaxable = Math.min(pref, taxable)
+  const ordinaryTaxable = Math.max(0, taxable - prefTaxable)
+  const ordinaryTax = bracketTax(ordinaryTaxable, brackets)
 
-  const totalTax = federal + fica + seTax + additionalMedicare
+  const [zeroTop, fifteenTop] = data.ltcgBrackets[status]
+  const prefStart = ordinaryTaxable
+  const prefEnd = ordinaryTaxable + prefTaxable
+  const fifteenPortion = Math.max(0, Math.min(prefEnd, fifteenTop) - Math.max(prefStart, zeroTop))
+  const twentyPortion = Math.max(0, prefEnd - Math.max(prefStart, fifteenTop))
+  const prefTax = 0.15 * fifteenPortion + 0.20 * twentyPortion
+
+  const federal = ordinaryTax + prefTax
+
+  // Net Investment Income Tax: 3.8% of the lesser of net investment income
+  // or the excess of MAGI (approximated as AGI) over the threshold.
+  const netInvestmentIncome = interest + qualDividends + ltcg + stcg
+  const niit = 0.038 * Math.min(
+    netInvestmentIncome,
+    Math.max(0, agi - data.niitThreshold[status]),
+  )
+
+  const totalTax = federal + fica + seTax + additionalMedicare + niit
   // Spendable cash after taxes AND pre-tax contributions (those are savings, not spending money).
   const takeHome = Math.max(0, gross - totalTax - preTax)
 
@@ -75,8 +103,9 @@ export function computeTaxes({
     gross, wages, se, seGross, seExpenses, preTax, rothIra, agi, deduction, qbiDeduction, taxable,
     federal, socialSecurity, medicare, fica,
     seTax, halfSeTax, additionalMedicare, totalTax, takeHome, rothStatus,
+    interest, qualDividends, ltcg, stcg, investmentIncome, prefTax, niit,
     effectiveRate: gross > 0 ? totalTax / gross : 0,
-    marginalFederalRate: marginalRate(taxable, brackets),
+    marginalFederalRate: marginalRate(ordinaryTaxable, brackets),
   }
 }
 

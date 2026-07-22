@@ -16,7 +16,7 @@ export default function PaycheckBar({ tax }) {
   const values = {
     takeHome: tax.takeHome,
     preTax: tax.preTax,
-    federal: tax.federal,
+    federal: tax.federal + tax.niit,
     ficaState: tax.fica + tax.seTax + tax.additionalMedicare,
   }
   const total = tax.gross || 1

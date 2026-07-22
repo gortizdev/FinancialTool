@@ -5,6 +5,8 @@ import { fmtUSD, fmtPct } from './lib/format'
 import { MoneyField, SelectField } from './components/Field'
 import TaxSummary from './components/TaxSummary'
 import PaycheckBar from './components/PaycheckBar'
+import BracketLadder from './components/BracketLadder'
+import TaxDonut from './components/TaxDonut'
 import TaxDetail from './components/TaxDetail'
 import SavingsPlanner from './components/SavingsPlanner'
 import VerdictCard from './components/VerdictCard'
@@ -12,6 +14,7 @@ import Paycheck401k from './components/Paycheck401k'
 import BusinessExpenses from './components/BusinessExpenses'
 import Accounts from './components/Accounts'
 import DataControls from './components/DataControls'
+import ThemeToggle from './components/ThemeToggle'
 import { estimateRemaining, checksRemaining, FREQS } from './lib/payroll'
 import { useLocalStorage } from './lib/useLocalStorage'
 
@@ -31,6 +34,57 @@ const TABS = [
   { id: 'plan', label: 'Savings plan' },
 ]
 
+const ICON_PROPS = {
+  width: 16, height: 16, viewBox: '0 0 16 16', fill: 'none',
+  stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round',
+  strokeLinejoin: 'round', 'aria-hidden': true,
+}
+
+function IconTaxes() {
+  return (
+    <svg {...ICON_PROPS}>
+      <rect x="3" y="1.5" width="10" height="13" rx="1" />
+      <line x1="5.5" y1="5" x2="10.5" y2="5" />
+      <line x1="5.5" y1="8" x2="10.5" y2="8" />
+      <line x1="5.5" y1="11" x2="8.5" y2="11" />
+    </svg>
+  )
+}
+
+function IconPaycheck() {
+  return (
+    <svg {...ICON_PROPS}>
+      <rect x="1.5" y="4" width="13" height="8" rx="1.4" />
+      <circle cx="8" cy="8" r="2" />
+    </svg>
+  )
+}
+
+function IconAccounts() {
+  return (
+    <svg {...ICON_PROPS}>
+      <path d="M1.5 6 8 1.5 14.5 6" />
+      <line x1="1.5" y1="6" x2="14.5" y2="6" />
+      <line x1="3" y1="6" x2="3" y2="13" />
+      <line x1="6.3" y1="6" x2="6.3" y2="13" />
+      <line x1="9.7" y1="6" x2="9.7" y2="13" />
+      <line x1="13" y1="6" x2="13" y2="13" />
+      <line x1="1.5" y1="14.5" x2="14.5" y2="14.5" />
+    </svg>
+  )
+}
+
+function IconPlan() {
+  return (
+    <svg {...ICON_PROPS}>
+      <polyline points="1.5,13 5.5,8.5 8.5,10.5 14.5,3" />
+      <polyline points="11,3 14.5,3 14.5,6.5" />
+    </svg>
+  )
+}
+
+const TAB_ICONS = { taxes: IconTaxes, paycheck: IconPaycheck, accounts: IconAccounts, plan: IconPlan }
+
 export default function App() {
   const [tab, setTab] = useState('taxes')
   const [year, setYear] = useLocalStorage('fintool.year', 2026)
@@ -39,6 +93,10 @@ export default function App() {
   const [expenses, setExpenses] = useLocalStorage('fintool.expenses', [])
   const [k401, setK401] = useLocalStorage('fintool.k401', 0)
   const [rothIra, setRothIra] = useLocalStorage('fintool.rothIra', 0)
+  const [interest, setInterest] = useLocalStorage('fintool.interest', 0)
+  const [qualDividends, setQualDividends] = useLocalStorage('fintool.qualDividends', 0)
+  const [ltcg, setLtcg] = useLocalStorage('fintool.ltcg', 0)
+  const [stcg, setStcg] = useLocalStorage('fintool.stcg', 0)
   const [freq, setFreq] = useLocalStorage('fintool.freq', '26')
   const [remaining, setRemaining] = useLocalStorage('fintool.remaining', estimateRemaining(26))
   const [stubDate, setStubDate] = useLocalStorage('fintool.stubDate', todayStr())
@@ -67,7 +125,10 @@ export default function App() {
   const projectedWages = ytdGross + grossPerCheck * remaining
   const wages = projectedWages
   const projWithholding = ytdFedWh + fedPerCheck * remaining + estPayments
-  const inputs = { year, status, wages, seGross, seExpenses, k401, rothIra }
+  const inputs = {
+    year, status, wages, seGross, seExpenses, k401, rothIra,
+    interest, qualDividends, ltcg, stcg,
+  }
   const tax = computeTaxes(inputs)
   // Tax attributable to the 1099 income — what to set aside from contracting pay.
   const seTaxShare = seGross > 0
@@ -81,17 +142,25 @@ export default function App() {
           <h1>Financial Planner</h1>
           <p className="tagline">Estimate your taxes, then plan what to save and invest.</p>
         </div>
-        <DataControls />
+        <div className="header-tools">
+          <ThemeToggle />
+          <DataControls />
+        </div>
       </header>
 
       <div role="tablist" aria-label="Sections" className="tab-bar">
-        {TABS.map((t) => (
-          <button key={t.id} type="button" role="tab" aria-selected={tab === t.id}
-            className={`tab${tab === t.id ? ' active' : ''}`}
-            onClick={() => setTab(t.id)}>
-            {t.label}
-          </button>
-        ))}
+        {TABS.map((t) => {
+          const Icon = TAB_ICONS[t.id]
+          return (
+            <button key={t.id} type="button" role="tab" aria-selected={tab === t.id}
+              aria-label={t.label}
+              className={`tab${tab === t.id ? ' active' : ''}`}
+              onClick={() => setTab(t.id)}>
+              <Icon />
+              <span className="tab-label">{t.label}</span>
+            </button>
+          )
+        })}
       </div>
 
       <div role="tabpanel" className="tab-panel" hidden={tab !== 'taxes'}>
@@ -142,6 +211,22 @@ export default function App() {
             {seGross > 0 && (
               <BusinessExpenses expenses={expenses} onChange={setExpenses} seGross={seGross} />
             )}
+            <h3 className="expenses-title">Investment income</h3>
+            <div className="field-row">
+              <MoneyField label="Interest & ordinary dividends" value={interest}
+                onChange={setInterest} step={100} hint="Taxed as ordinary income" />
+              <MoneyField label="Qualified dividends" value={qualDividends}
+                onChange={setQualDividends} step={100} hint="Taxed at capital-gains rates" />
+            </div>
+            <div className="field-row">
+              <MoneyField label="Long-term capital gains" value={ltcg}
+                onChange={setLtcg} step={100} hint="Held over a year · 0/15/20% rates" />
+              <MoneyField label="Short-term capital gains" value={stcg}
+                onChange={setStcg} step={100} hint="Held under a year · taxed as ordinary income" />
+            </div>
+            <span className="field-hint">
+              Enter net gains — losses and loss carryovers aren't modeled.
+            </span>
             <MoneyField label="401(k) contribution / yr" value={k401} onChange={setK401}
               hint={`${year} limit: ${fmtUSD(limits.k401)}`} max={limits.k401} />
             <MoneyField label="Roth IRA / yr" value={rothIra} onChange={setRothIra}
@@ -160,7 +245,7 @@ export default function App() {
             <h2>Tax estimate · {year}</h2>
             <TaxSummary tax={tax} />
             {(ytdGross > 0 || grossPerCheck > 0) && (() => {
-              const liability = tax.federal + tax.seTax + tax.additionalMedicare
+              const liability = tax.federal + tax.seTax + tax.additionalMedicare + tax.niit
               const diff = projWithholding - liability
               const short = diff < -1
               const perCheck = remaining > 0 ? -diff / remaining : 0
@@ -211,6 +296,8 @@ export default function App() {
               </p>
             )}
             <PaycheckBar tax={tax} />
+            <BracketLadder year={year} status={status} tax={tax} />
+            <TaxDonut tax={tax} />
             <TaxDetail tax={tax} />
           </section>
         </div>
@@ -233,8 +320,9 @@ export default function App() {
 
       <footer>
         Estimates use the {year} federal standard deduction and brackets, no state
-        income tax (Florida), and the simplified 20% QBI deduction (no high-income
-        phase-outs). For planning only — not tax or investment advice.
+        income tax (Florida), the simplified 20% QBI deduction (no high-income
+        phase-outs), and long-term gains and qualified dividends at 0/15/20% with
+        NIIT. For planning only — not tax or investment advice.
       </footer>
     </div>
   )

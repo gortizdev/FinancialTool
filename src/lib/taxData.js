@@ -29,6 +29,8 @@ export const TAX_DATA = {
     ssWageBase: 176100,
     limits: { k401: 23500, ira: 7000 },
     rothIraPhaseOut: { single: [150000, 165000], mfj: [236000, 246000], hoh: [150000, 165000] },
+    ltcgBrackets: { single: [48350, 533400], mfj: [96700, 600050], hoh: [64750, 566700] },
+    niitThreshold: { single: 200000, mfj: 250000, hoh: 200000 },
   },
   2026: {
     standardDeduction: { single: 16100, mfj: 32200, hoh: 24150 },
@@ -49,6 +51,8 @@ export const TAX_DATA = {
     ssWageBase: 184500,
     limits: { k401: 24500, ira: 7500 },
     rothIraPhaseOut: { single: [153000, 168000], mfj: [242000, 252000], hoh: [153000, 168000] },
+    ltcgBrackets: { single: [49450, 545500], mfj: [98900, 613700], hoh: [66200, 579600] },
+    niitThreshold: { single: 200000, mfj: 250000, hoh: 200000 },
   },
 }
 
